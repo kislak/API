@@ -1,12 +1,11 @@
 class AccountsController < ApplicationController
-  before_action :set_account, only: [:show, :destroy]
+  before_action :set_account, only: %i[show destroy]
+  before_action :set_current_user, only: %i[index create]
+
+  attr_reader :accounts, :user
 
   def index
-    # puts Account
-    @user = User.find(current_user.id)
-    @accounts = @user.accounts
-    p @accounts
-    # @accounts = User.accounts.find(current_user.id)
+    @accounts = user.accounts
   end
 
   def new
@@ -14,48 +13,39 @@ class AccountsController < ApplicationController
   end
 
   def create
-    @user = User.find(current_user.id)
-    @account = Account.create(iban: Forgery('credit_card').number)
+    @account = Account.create(iban: Faker::Number.number(16), balance: 1000)
     @account.roles.create(user: @user, role: 'owner')
-#    if @account.save
-#    #  format.html { redirect_to @account, notice: 'Account was successfully created.' }
-#    end
 
     respond_to do |format|
       if @account.save
         format.html { redirect_to @account, notice: 'Account was successfully created.' }
-        format.json { render :show, status: :created, location: @profile }
       else
         format.html { render :new }
-        format.json { render json: @profile.errors, status: :unprocessable_entity }
       end
     end
-
   end
 
   def show
+    @my_transactions = Transaction.find_by(user_id: current_user.id,
+                                           account_id: params[:id])
 
+    @income = Transaction.find_by(remote_account_id: @account.iban.to_s,
+                                  status_to: false)
+    @income.to_a
   end
 
   def destroy
     @account.destroy
-    #respond_to do |format|
-    #  format.html { redirect_to account_url, notice: 'Profile was successfully destroyed.' }
-    #  format.json { head :no_content }
-    #end
-    redirect_to :profiles
+    redirect_to accounts_url
   end
-
 
   private
 
   def set_account
     @account = Account.find(params[:id])
-    @account.balance ||= 1000
   end
 
-
-  #def account_params
-  #  params.fetch(:account).permit(:user_id)
-  #end
+  def set_current_user
+    @user = User.find(current_user.id)
+  end
 end
