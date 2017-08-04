@@ -49,10 +49,21 @@ class InvitesController < ApplicationController
     params.fetch(:invite).permit(:email)
   end
 
+  def email_blank
+    invite_params[:email].blank?
+
+  end
+
   def set_user_to_id
-    @user_to = User.find_by(email: invite_params[:email]).id
-  rescue NoMethodError
-    redirect_to account_invites_url, notice: 'Field should\'t be blank'
+    email = invite_params[:email]
+    user = User.find_by(email: email)
+    if email.blank?
+      redirect_to account_invites_url, notice: 'Field should\'t be blank'
+    elsif user.nil?
+      redirect_to account_invites_url, notice: '@mail not found'
+    else
+      @user_to = user.id
+    end
   end
 
   def set_current_user_id
